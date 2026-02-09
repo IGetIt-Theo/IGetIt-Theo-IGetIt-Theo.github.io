@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>US Baby Names Analysis | Theo's Portfolio</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            line-height: 1.6;
+            color: #333;
+        }
+        h1 { color: #2c3e50; margin-bottom: 10px; }
+        .metadata { color: #7f8c8d; margin-bottom: 30px; }
+        .dashboard-container {
+            width: 100%;
+            height: 800px;
+            border: 1px solid #ddd;
+            margin: 30px 0;
+        }
+        .section { margin: 40px 0; }
+        a { color: #3498db; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back-link { margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="back-link"><a href="../index.html">← Back to Portfolio</a></div>
+    
+    <h1>US Baby Names Analysis (1921-2021)</h1>
+    <div class="metadata">Power BI | DAX | Google BigQuery | January 2025</div>
+    
+    <div class="section">
+        <h2>Overview</h2>
+        <p>Interactive dashboard analyzing 100 years of US baby name trends using SSA data. The visualization reveals fascinating cultural shifts, including how names like "Charlie" transitioned from predominantly male (90%+ in the 1920s) to predominantly female (60%+ by 2021).</p>
+    </div>
+    
+    <div class="dashboard-container">
+        <iframe 
+            width="100%" 
+            height="100%" 
+            src="https://app.powerbi.com/view?r=eyJrIjoiNTE5NjI5YmYtNDZkMy00MWRmLTk2ZDYtZDgxYzA1ZGYwOWQzIiwidCI6ImNmOGM1NzBlLTFlMjYtNDczMi04ZTNiLWVhYjI0ODAyNTI3MyIsImMiOjZ9&embedImagePlaceholder=true" 
+            frameborder="0" 
+            allowFullScreen="true">
+        </iframe>
+    </div>
+    
+    <div class="section">
+        <h2>Key Features</h2>
+        <ul>
+            <li><strong>Searchable name database</strong> - Type partial names (e.g., "Charl") to explore variations</li>
+            <li><strong>Historical rank tracking</strong> - Shows peak popularity and year achieved</li>
+            <li><strong>Gender distribution analysis</strong> - Visualizes how naming patterns shift over time</li>
+            <li><strong>Geographic heat mapping</strong> - Per-capita popularity by state (continental US)</li>
+        </ul>
+    </div>
+    
+    <div class="section">
+        <h2>Technical Approach</h2>
+        <p><strong>Data modeling:</strong> Structured star schema with dimension tables for names, dates, and states, connected to a fact table of birth records.</p>
+        <p><strong>Data filtering:</strong> Limited to names with 1,500+ total births to focus on culturally significant trends and improve performance.</p>
+        <p><strong>Key calculations:</strong></p>
+        <ul>
+            <li>DAX RANKX function for historical rank calculations across 100+ years</li>
+            <li>Per-capita popularity (births with name ÷ total births by state)</li>
+            <li>Gender percentage trends over time</li>
+        </ul>
+        <p><strong>Tools:</strong> Power BI Desktop, DAX, Google BigQuery, Excel Power Query</p>
+    </div>
+    
+    <div class="section">
+        <h2>Insights</h2>
+        <p>The dashboard reveals several compelling patterns:</p>
+        <ul>
+            <li>Names like Charlie, Taylor, and Ashley show dramatic gender shifts over decades</li>
+            <li>Regional naming preferences persist even as national trends change</li>
+            <li>Popularity peaks are often sharp and short-lived (e.g., Jennifer in the 1970s-80s)</li>
+        </ul>
+    </div>
+    
+    <div class="back-link" style="margin-top: 50px;"><a href="../index.html">← Back to Portfolio</a></div>
+</body>
+</html>
