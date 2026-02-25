@@ -8,6 +8,14 @@ random.seed(42)
 
 # ── DATA GENERATION ───────────────────────────────────────────────────────────
 
+# Observation cutoff: simulates a reporting snapshot date. Charge-offs that would
+# occur after this date are not yet observable, so they are excluded from the loan
+# records entirely. This produces naturally incomplete curves for later tranches —
+# the visualization relies on this; the eye extrapolates against fully-seasoned
+# earlier vintages.
+
+CUTOFF_DATE = date(2011, 6, 30)
+
 CREDIT_BANDS = {
     'Super Prime': {'range': (720, 850), 'base_co_rate': 0.008,  'weight': 0.25},
     'Prime':       {'range': (680, 719), 'base_co_rate': 0.020,  'weight': 0.30},
@@ -67,11 +75,22 @@ for year in range(2007, 2011):
                 recovery = None
                 deficiency_paid = False
                 if will_default:
-                    valid_months = [m for m in range(1, 61) if m <= term]
-                    valid_probs = [HAZARD_BY_MONTH[m] for m in valid_months]
-                    norm = sum(valid_probs)
-                    valid_probs = [p/norm for p in valid_probs]
-                    charge_off_month = random.choices(valid_months, weights=valid_probs)[0]
+                    # Cap observable charge-offs at the cutoff date.
+                    # A loan originated in Oct 2010 can only be observed charging off
+                    # through June 2011 (8 months), regardless of its term.
+                    months_to_cutoff = (
+                        (CUTOFF_DATE.year - orig_date.year) * 12
+                        + (CUTOFF_DATE.month - orig_date.month)
+                    )
+                    max_observable = min(term, months_to_cutoff)
+                    valid_months = [m for m in range(1, max_observable + 1)]
+                    if not valid_months:
+                        will_default = False
+                    else:
+                        valid_probs = [HAZARD_BY_MONTH[m] for m in valid_months]
+                        norm = sum(valid_probs)
+                        valid_probs = [p/norm for p in valid_probs]
+                        charge_off_month = random.choices(valid_months, weights=valid_probs)[0]
                     balance = principal
                     for _ in range(charge_off_month - 1):
                         interest = balance * r
@@ -121,56 +140,4 @@ for year in range(2007, 2011):
 
 df = pd.DataFrame(loans)
 
-# ── OBSERVATION CUTOFF ───────────────────────────────────────────────────────
-# Simulates a reporting snapshot date. Tranches originated close to the cutoff
-# will have incomplete curves, mirroring real static pool analyses where later
-# vintages are still maturing. The visualization relies on this — the eye
-# extrapolates the incomplete curves against the fully-seasoned earlier tranches.
-CUTOFF_DATE = date(2011, 6, 30)
-
-# Static pool
-pool_rows = []
-tranches = sorted(df['tranche'].unique())
-vtypes = ['New', 'Used']
-bands = list(CREDIT_BANDS.keys())
-
-for tranche in tranches:
-    for vtype in vtypes:
-        for band in bands:
-            mask = (df['tranche'] == tranche) & (df['vehicle_type'] == vtype) & (df['credit_band'] == band)
-            subset = df[mask]
-            n_loans = len(subset)
-            if n_loans == 0: continue
-            total_orig_balance = subset['original_balance'].sum()
-            defaulters = subset[subset['charged_off'] == True]
-
-            # Max observable MOB for this tranche = months from first origination date to cutoff
-            tranche_orig_date = subset['origination_date'].min()
-            max_observable_mob = (
-                (CUTOFF_DATE.year - tranche_orig_date.year) * 12
-                + (CUTOFF_DATE.month - tranche_orig_date.month)
-            )
-            max_observable_mob = max(1, min(max_observable_mob, 60))
-
-            for age_month in range(1, max_observable_mob + 1):
-                cum_co_count = int((defaulters['charge_off_month'] <= age_month).sum())
-                cum_co_balance = float(defaulters.loc[defaulters['charge_off_month'] <= age_month, 'charge_off_balance'].sum())
-                cum_net_loss = float(defaulters.loc[defaulters['charge_off_month'] <= age_month, 'net_loss'].sum())
-                pool_rows.append({
-                    'tranche': tranche,
-                    'vehicle_type': vtype,
-                    'credit_band': band,
-                    'loan_age_months': age_month,
-                    'n_loans_in_tranche': n_loans,
-                    'total_orig_balance': round(total_orig_balance, 0),
-                    'cum_chargeoff_count': cum_co_count,
-                    'cum_chargeoff_balance': round(cum_co_balance, 0),
-                    'cum_net_loss': round(cum_net_loss, 0),
-                    'cum_co_rate_count': round(cum_co_count / n_loans, 6) if n_loans > 0 else 0,
-                    'cum_co_rate_balance': round(cum_co_balance / total_orig_balance, 6) if total_orig_balance > 0 else 0,
-                })
-
-df_pool = pd.DataFrame(pool_rows)
-
-df.to_csv('auto_loan_detail.csv', index=False)
-df_pool.to_csv('auto_loan_static_pool.csv', index=False)
+df.to_csv('auto_loan_detail_cutoff.csv', index=False)
