@@ -3,8 +3,8 @@ import numpy as np
 import random
 from datetime import date
 
-np.random.seed()
-random.seed()
+np.random.seed(42)
+random.seed(42)
 
 # ── DATA GENERATION ───────────────────────────────────────────────────────────
 
@@ -121,6 +121,13 @@ for year in range(2007, 2011):
 
 df = pd.DataFrame(loans)
 
+# ── OBSERVATION CUTOFF ───────────────────────────────────────────────────────
+# Simulates a reporting snapshot date. Tranches originated close to the cutoff
+# will have incomplete curves, mirroring real static pool analyses where later
+# vintages are still maturing. The visualization relies on this — the eye
+# extrapolates the incomplete curves against the fully-seasoned earlier tranches.
+CUTOFF_DATE = date(2011, 6, 30)
+
 # Static pool
 pool_rows = []
 tranches = sorted(df['tranche'].unique())
@@ -136,7 +143,16 @@ for tranche in tranches:
             if n_loans == 0: continue
             total_orig_balance = subset['original_balance'].sum()
             defaulters = subset[subset['charged_off'] == True]
-            for age_month in range(1, 61):
+
+            # Max observable MOB for this tranche = months from first origination date to cutoff
+            tranche_orig_date = subset['origination_date'].min()
+            max_observable_mob = (
+                (CUTOFF_DATE.year - tranche_orig_date.year) * 12
+                + (CUTOFF_DATE.month - tranche_orig_date.month)
+            )
+            max_observable_mob = max(1, min(max_observable_mob, 60))
+
+            for age_month in range(1, max_observable_mob + 1):
                 cum_co_count = int((defaulters['charge_off_month'] <= age_month).sum())
                 cum_co_balance = float(defaulters.loc[defaulters['charge_off_month'] <= age_month, 'charge_off_balance'].sum())
                 cum_net_loss = float(defaulters.loc[defaulters['charge_off_month'] <= age_month, 'net_loss'].sum())
@@ -156,5 +172,5 @@ for tranche in tranches:
 
 df_pool = pd.DataFrame(pool_rows)
 
-df.to_csv('auto_loan_detail1.csv', index=False)
-df_pool.to_csv('auto_loan_static_pool1.csv', index=False)
+df.to_csv('auto_loan_detail.csv', index=False)
+df_pool.to_csv('auto_loan_static_pool.csv', index=False)
